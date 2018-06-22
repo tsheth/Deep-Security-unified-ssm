@@ -20,4 +20,26 @@ Deployment document can be used in following automation scenarios
   
 #### Steps to configure SSM maintainance window.
  
+![alt text](https://github.com/tsheth/Deep-Security-unified-ssm/blob/master/git-snaps/1.PNG)
+
+![alt text](https://github.com/tsheth/Deep-Security-unified-ssm/blob/master/git-snaps/2.PNG)
+
+![alt text](https://github.com/tsheth/Deep-Security-unified-ssm/blob/master/git-snaps/3.PNG)
+
+![alt text](https://github.com/tsheth/Deep-Security-unified-ssm/blob/master/git-snaps/4.PNG)
+
+![alt text](https://github.com/tsheth/Deep-Security-unified-ssm/blob/master/git-snaps/5.PNG)
+
+![alt text](https://github.com/tsheth/Deep-Security-unified-ssm/blob/master/git-snaps/6.PNG)
+
+![alt text](https://github.com/tsheth/Deep-Security-unified-ssm/blob/master/git-snaps/7.PNG)
+
+![alt text](https://github.com/tsheth/Deep-Security-unified-ssm/blob/master/git-snaps/8.PNG)
+
+![alt text](https://github.com/tsheth/Deep-Security-unified-ssm/blob/master/git-snaps/9.PNG)
+
+![alt text](https://github.com/tsheth/Deep-Security-unified-ssm/blob/master/git-snaps/10.PNG)
+
+
+
 
