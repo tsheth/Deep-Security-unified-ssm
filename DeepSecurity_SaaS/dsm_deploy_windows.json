@@ -1,0 +1,74 @@
+{
+	"schemaVersion": "2.2",
+	"description": "Execute scripts stored in a remote location. The following remote locations are currently supported: GitHub (public and private) and Amazon S3 (S3). The following script types are currently supported: #! support on Linux and file associations on Windows.",
+	"parameters":{
+		"TenantID":{
+			"type":"String",
+			"default":"F830CFAC-7988-A9A9-A7F1-6B8DED69E414",
+			"description":"(Required) Deep security Tenant ID need to be given here"
+		},
+		"Token":{
+			"type":"String",
+			"default":"20D45733-54EC-EB16-5587-D15237964D09",
+			"description":"(Required) Deep security authentication token has to be given in this field"
+		},
+		"WindowsPolicyID":{
+			"type":"String",
+			"default":"1",
+			"description":"(Optional) Deep security Windows policy id need to applied here for activation"
+		},
+		"LinuxPolicyID":{
+			"type":"String",
+			"default":"1",
+			"description":"(Optional) Deep security Linux policy id need to applied here for activation"
+		}
+	},
+
+	"mainSteps": [{
+		"action": "aws:downloadContent",
+		"name": "downloadContent",
+		"inputs": {
+			"sourceType": "S3",
+			"sourceInfo": "{\"path\":\"https://s3.amazonaws.com/awstrendssm-script/\"}"
+      }
+
+	},
+
+	{
+		"precondition": {
+			"StringEquals": ["platformType",
+			"Windows"]
+		},
+		"action": "aws:runPowerShellScript",
+		"name": "runPowerShellScript",
+		"inputs": {
+			"runCommand": ["",
+			"$directory = Convert-Path .",
+			"$env:PATH += \";$directory\"",
+			"Install-TMDSWindows-Unsigned.ps1 -TenantID '{{TenantID}}' -Token '{{Token}}' -PolicyID '{{WindowsPolicyID}}'",
+			"if ($?) {",
+			"    exit $LASTEXITCODE",
+			"} else {",
+			"    exit 255",
+			"}",
+			""],
+			"timeoutSeconds": "3600"
+		}
+	},
+	{
+		"precondition": {
+			"StringEquals": ["platformType",
+			"Linux"]
+		},
+		"action": "aws:runShellScript",
+		"name": "runShellScript",
+		"inputs": {
+			"runCommand": ["",
+			"directory=$(pwd)",
+			"export PATH=$PATH:$directory",
+			"TMDSLinux_install.sh {{TenantID}} {{Token}} {{LinuxPolicyID}}",
+			""],
+			"timeoutSeconds": "3600"
+		}
+	}]
+}
