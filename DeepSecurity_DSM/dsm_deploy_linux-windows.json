@@ -1,0 +1,69 @@
+{
+	"schemaVersion": "2.2",
+	"description": "Execute scripts stored in a remote location for Deep security manager deployed with customer managed instance. The following remote locations are currently supported: GitHub (public and private) and Amazon S3 (S3). The following script types are currently supported: #! support on Linux and file associations on Windows.",
+	"parameters":{
+		"DSMURL":{
+			"type":"String",
+			"default":"dsm://<ip/dns>",
+			"description":"(Required) Deep security manager ip address or domain name"
+		},
+		"WindowsPolicyID":{
+			"type":"String",
+			"default":"1",
+			"description":"(Optional) Deep security Windows policy id need to applied here for activation"
+		},
+		"LinuxPolicyID":{
+			"type":"String",
+			"default":"1",
+			"description":"(Optional) Deep security Linux policy id need to applied here for activation"
+		}
+	},
+
+	"mainSteps": [{
+		"action": "aws:downloadContent",
+		"name": "downloadContent",
+		"inputs": {
+			"sourceType": "S3",
+			"sourceInfo": "{\"path\":\"https://s3.amazonaws.com/awstrendssm-script/\"}"
+      }
+
+	},
+
+	{
+		"precondition": {
+			"StringEquals": ["platformType",
+			"Windows"]
+		},
+		"action": "aws:runPowerShellScript",
+		"name": "runPowerShellScript",
+		"inputs": {
+			"runCommand": ["",
+			"$directory = Convert-Path .",
+			"$env:PATH += \";$directory\"",
+			"Install-TMDSWindows_DSM.ps1 -DSMURL '{{DSMURL}}' -PolicyID '{{WindowsPolicyID}}'",
+			"if ($?) {",
+			"    exit $LASTEXITCODE",
+			"} else {",
+			"    exit 255",
+			"}",
+			""],
+			"timeoutSeconds": "3600"
+		}
+	},
+	{
+		"precondition": {
+			"StringEquals": ["platformType",
+			"Linux"]
+		},
+		"action": "aws:runShellScript",
+		"name": "runShellScript",
+		"inputs": {
+			"runCommand": ["",
+			"directory=$(pwd)",
+			"export PATH=$PATH:$directory",
+			"TMDSLinux_DSM_install.sh {{DSMURL}} {{LinuxPolicyID}}",
+			""],
+			"timeoutSeconds": "3600"
+		}
+	}]
+}
