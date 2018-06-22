@@ -18,6 +18,6 @@ Deployment document can be used in following automation scenarios
 ### Systems manager maintainance window automation.
    This approach is useful when security is provided to EC2 owenr as a self service. EC2 owner can add the tag to EC2 server which can mark the server to deploy DSA and activate it during the maintainance window time line.
   
-### Steps to configure SSM maintainance window.
+#### Steps to configure SSM maintainance window.
  
 
