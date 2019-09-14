@@ -1,0 +1,192 @@
+{
+	"schemaVersion": "2.2",
+	"description": "Execute scripts stored in a remote location. The following remote locations are currently supported: GitHub (public and private) and Amazon S3 (S3). The following script types are currently supported: #! support on Linux and file associations on Windows.",
+	"parameters":{
+		"DSActivationURL":{
+			"type":"String",
+			"default":"agent.deepsecurity.trendmicro.com",
+			"description":"(Required) Deep security agent activation URL need to be given here"
+		},
+		"DSActivationPort":{
+			"type":"String",
+			"default":"443",
+			"description":"(Required) Deep security agent activation port need to be given here"
+		},
+		"DSManagerURL":{
+			"type":"String",
+			"default":"app.deepsecurity.trendmicro.com",
+			"description":"(Required) Deep security URL for dashboard need to be given here"
+		},
+		"TenantID":{
+			"type":"String",
+			"default":"<TenentID>",
+			"description":"(Required) Deep security Tenant ID need to be given here"
+		},
+		"Token":{
+			"type":"String",
+			"default":"<DSM Token>",
+			"description":"(Required) Deep security authentication token has to be given in this field"
+		},
+		"WindowsPolicyID":{
+			"type":"String",
+			"default":"1",
+			"description":"(Optional) Deep security Windows policy id need to applied here for activation"
+		},
+		"LinuxPolicyID":{
+			"type":"String",
+			"default":"1",
+			"description":"(Optional) Deep security Linux policy id need to applied here for activation"
+		}
+	},
+
+	"mainSteps": [
+	{
+		"precondition": {
+			"StringEquals": ["platformType",
+			"Windows"]
+		},
+		"action": "aws:runPowerShellScript",
+		"name": "runPowerShellScript",
+		"inputs": {
+			"runCommand": [
+				"PARAM",
+				"(",
+				"[Parameter(Position=0)]",
+				"[ValidateNotNullOrEmpty()]",
+				"[String] \"{{DSActivationURL}}\",",
+
+				"[Parameter(Position=1)]",
+				"[ValidateNotNullOrEmpty()]",
+				"[String] \"{{DSActivationPort}}\",",
+
+				"[Parameter(Position=2)]",
+				"[ValidateNotNullOrEmpty()]",
+				"[String] \"{{DSManagerURL}}\",",
+
+				"[Parameter(Position=3)]",
+				"[ValidateNotNullOrEmpty()]",
+				"[String] \"{{TenantID}}\",",
+
+				"[Parameter(Position=4)]",
+				"[ValidateNotNullOrEmpty()]",
+				"[String] \"{{Token}}\",",
+
+				"[Parameter(Position=5)]",
+				"[ValidateNotNullOrEmpty()]",
+				"[String] \"{{WindowsPolicyID}}\"",
+			")",
+			"PROCESS",
+			"{",
+				"# This script detects platform and architecture.  It then downloads and installs the relevant Deep Security Agent 10 package",
+				"if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] \"Administrator\")) {",
+	   				"Write-Warning \"You are not running as an Administrator. Please try again with admin privileges.\"",
+	   				"exit 1",
+				"}",
+				"$env:LogPath = \"$env:appdata\\Trend Micro\\Deep Security Agent\\installer\"",
+				"New-Item -path $env:LogPath -type directory",
+				"Start-Transcript -path \"$env:LogPath\\dsa_deploy.log\" -append",
+				"$data = \"$(Get-Date) - ActivationURL:$ActivationURL ActivationPort:$ActivationPort ManagerURL:$ManagerURL TenantID:$TenantID Token:$Token PolicyID:$PolicyID\"",
+				"$data",
+
+				"echo \"$(Get-Date -format T) - DSA download started\"",
+				"[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;",
+				"$baseUrl=\"https://$ManagerURL/:443/\"",
+				"if ( [intptr]::Size -eq 8 ) {",
+	   				"$sourceUrl=-join($baseurl, \"software/agent/Windows/x86_64/\") }",
+				"else {",
+	   			"$sourceUrl=-join($baseurl, \"software/agent/Windows/i386/\")",
+				"}",
+				"echo \"$(Get-Date -format T) - Download Deep Security Agent Package\" $sourceUrl",
+				"Try",
+				"{",
+					"(New-Object System.Net.WebClient).DownloadFile($sourceUrl,  \"$env:temp\\agent.msi\")",
+				"}",
+				"Catch [System.Net.WebException] {",
+					"echo \"TLS certificate validation for the agent package download has failed. Please check that your Deep Security Manager TLS certificate is signed by a trusted root certificate authority. For more information, search for `\"deployment scripts`\" in the Deep Security Help Center.\"",
+	 				"exit 2;",
+				"}",
+				"if ( (Get-Item \"$env:temp\\agent.msi\").length -eq 0 ) {",
+				"echo \"Failed to download the Deep Security Agent. Please check if the package is imported into the Deep Security Manager. \"",
+					"exit 1",
+				"}",
+				"echo \"$(Get-Date -format T) - Downloaded File Size:\" (Get-Item \"$env:temp\\agent.msi\").length",
+				"echo \"$(Get-Date -format T) - DSA install started\"",
+				"echo \"$(Get-Date -format T) - Installer Exit Code:\" (Start-Process -FilePath msiexec -ArgumentList \"/i $env:temp\\agent.msi /qn ADDLOCAL=ALL /l*v `\"$env:LogPath\\dsa_install.log`\"\" -Wait -PassThru).ExitCode",
+				"echo \"$(Get-Date -format T) - DSA activation started\"",
+				"Start-Sleep -s 50",
+				"& $Env:ProgramFiles\"\\Trend Micro\\Deep Security Agent\\dsa_control\" -r",
+				"& $Env:ProgramFiles\"\\Trend Micro\\Deep Security Agent\\dsa_control\" -a \"dsm://$ActivationURL/:$ActivationPort/\" \"tenantID:$TenantID\" \"token:$Token\" \"policyid:$WindowsPolicyID\"",
+				"Stop-Transcript",
+				"echo \"$(Get-Date -format T) - DSA Deployment Finished\"",
+			"}"
+			],
+			"timeoutSeconds": "3600"
+		}
+	},
+	{
+		"precondition": {
+			"StringEquals": ["platformType",
+			"Linux"]
+		},
+		"action": "aws:runShellScript",
+		"name": "runShellScript",
+		"inputs": {
+			"runCommand": [
+				"#!/bin/bash",
+				"ACTIVATIONURL=\"dsm://{{DSActivationURL}}:{{DSActivationPort}}/\"",
+				"MANAGERURL=\"https://{{DSManagerURL}}:443\"",
+				"CURLOPTIONS='--silent --tlsv1.2'",
+				"linuxPlatform='';",
+				"isRPM='';",
+
+				"if [[ $(/usr/bin/id -u) -ne 0 ]]; then",
+    				"echo You are not running as the root user.  Please try again with root privileges.;",
+    				"logger -t You are not running as the root user.  Please try again with root privileges.;",
+    				"exit 1;",
+				"fi;",
+
+				"if type curl >/dev/null 2>&1; then",
+  					"curl $MANAGERURL/software/deploymentscript/platform/linuxdetectscriptv1/ -o /tmp/PlatformDetection $CURLOPTIONS --insecure",
+
+  					"if [ -s /tmp/PlatformDetection ]; then",
+      					". /tmp/PlatformDetection",
+      					"platform_detect",
+						"if [[ -z \"$linuxPlatform\" ]] || [[ -z \"$isRPM\" ]]; then",
+							"echo Unsupported platform is detected",
+							"logger -t Unsupported platform is detected",
+							"false",
+						"else",
+							"echo Downloading agent package...",
+							"if [[ $isRPM == 1 ]]; then package='agent.rpm'",
+							"else package='agent.deb'",
+							"fi",
+							"curl $MANAGERURL/software/agent/$linuxPlatform -o /tmp/$package $CURLOPTIONS --insecure",
+							"echo Installing agent package...",
+         					"if [[ $isRPM == 1 && -s /tmp/agent.rpm ]]; then",
+           						"rpm -ihv /tmp/agent.rpm",
+         					"elif [[ -s /tmp/agent.deb ]]; then",
+           						"dpkg -i /tmp/agent.deb",
+         					"else",
+           						"echo Failed to download the agent package. Please make sure the package is imported in the Deep Security Manager",
+           						"echo logger -t Failed to download the agent package. Please make sure the package is imported in the Deep Security Manager",
+           						"false",
+         					"fi",
+      					"fi",
+  				"else",
+     				"echo \"Failed to download the agent installation support script.\"",
+     				"logger -t Failed to download the Deep Security Agent installation support script",
+     				"false",
+  				"fi",
+			"else",
+  				"echo \"Please install CURL before running this script.\"",
+  				"logger -t Please install CURL before running this script",
+  				"false",
+			"fi",
+			"sleep 15",
+			"/opt/ds_agent/dsa_control -r",
+			"/opt/ds_agent/dsa_control -a $ACTIVATIONURL \"tenantID:{{TenantID}}\" \"token:{{Token}}\" \"policyid:{{LinuxPolicyID}}\""
+			],
+			"timeoutSeconds": "3600"
+		}
+	}]
+}

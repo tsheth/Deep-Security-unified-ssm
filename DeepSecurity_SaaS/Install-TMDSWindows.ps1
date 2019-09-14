@@ -2,6 +2,18 @@ PARAM
 (
 	[Parameter(Position=0)]
 	[ValidateNotNullOrEmpty()]
+	[String] $ActivationURL,
+
+	[Parameter(Position=1)]
+	[ValidateNotNullOrEmpty()]
+	[String] $ActivationPort,
+
+	[Parameter(Position=2)]
+	[ValidateNotNullOrEmpty()]
+	[String] $ManagerURL,
+
+	[Parameter(Position=0)]
+	[ValidateNotNullOrEmpty()]
 	[String] $TenantID,
 
 	[Parameter(Position=1)]
@@ -27,7 +39,7 @@ PROCESS
 
 	echo "$(Get-Date -format T) - DSA download started"
 	[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;
-	$baseUrl="https://app.deepsecurity.trendmicro.com:443/"
+	$baseUrl="https://$ManagerURL/:443/"
 	if ( [intptr]::Size -eq 8 ) { 
 	   $sourceUrl=-join($baseurl, "software/agent/Windows/x86_64/") }
 	else {
@@ -50,7 +62,7 @@ PROCESS
 	echo "$(Get-Date -format T) - DSA activation started"
 	Start-Sleep -s 50
 	& $Env:ProgramFiles"\Trend Micro\Deep Security Agent\dsa_control" -r
-	& $Env:ProgramFiles"\Trend Micro\Deep Security Agent\dsa_control" -a dsm://agents.deepsecurity.trendmicro.com:443/ "tenantID:$TenantID" "token:$Token" "policyid:$PolicyID"
+	& $Env:ProgramFiles"\Trend Micro\Deep Security Agent\dsa_control" -a dsm://$ActivationURL:$ActivationPort/ "tenantID:$TenantID" "token:$Token" "policyid:$PolicyID"
 	Stop-Transcript
 	echo "$(Get-Date -format T) - DSA Deployment Finished"
 }

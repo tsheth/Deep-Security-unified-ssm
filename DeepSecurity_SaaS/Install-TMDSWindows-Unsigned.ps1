@@ -2,19 +2,30 @@ PARAM
 (
 	[Parameter(Position=0)]
 	[ValidateNotNullOrEmpty()]
-	[String] $TenantID,
+	[String] $ActivationURL,
 
 	[Parameter(Position=1)]
 	[ValidateNotNullOrEmpty()]
+	[String] $ActivationPort,
+
+	[Parameter(Position=2)]
+	[ValidateNotNullOrEmpty()]
+	[String] $ManagerURL,
+
+	[Parameter(Position=3)]
+	[ValidateNotNullOrEmpty()]
+	[String] $TenantID,
+
+	[Parameter(Position=4)]
+	[ValidateNotNullOrEmpty()]
 	[String] $Token,
 
-	[Parameter(Position=1)]
+	[Parameter(Position=5)]
 	[ValidateNotNullOrEmpty()]
 	[String] $PolicyID
 )
 PROCESS
 {
-	#requires -version 4.0
 	# This script detects platform and architecture.  It then downloads and installs the relevant Deep Security Agent 10 package
 	if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
 	   Write-Warning "You are not running as an Administrator. Please try again with admin privileges."
@@ -22,12 +33,12 @@ PROCESS
 	$env:LogPath = "$env:appdata\Trend Micro\Deep Security Agent\installer"
 	New-Item -path $env:LogPath -type directory
 	Start-Transcript -path "$env:LogPath\dsa_deploy.log" -append
-	$data = "$(Get-Date) - TenantID:$TenantID Token:$Token PolicyID:$PolicyID"
+	$data = "$(Get-Date) - ActivationURL:$ActivationURL ActivationPort:$ActivationPort ManagerURL:$ManagerURL TenantID:$TenantID Token:$Token PolicyID:$PolicyID"
 	$data
 
 	echo "$(Get-Date -format T) - DSA download started"
 	[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;
-	$baseUrl="https://app.deepsecurity.trendmicro.com:443/"
+	$baseUrl="https://$ManagerURL/:443/"
 	if ( [intptr]::Size -eq 8 ) { 
 	   $sourceUrl=-join($baseurl, "software/agent/Windows/x86_64/") }
 	else {
@@ -50,7 +61,7 @@ PROCESS
 	echo "$(Get-Date -format T) - DSA activation started"
 	Start-Sleep -s 50
 	& $Env:ProgramFiles"\Trend Micro\Deep Security Agent\dsa_control" -r
-	& $Env:ProgramFiles"\Trend Micro\Deep Security Agent\dsa_control" -a dsm://agents.deepsecurity.trendmicro.com:443/ "tenantID:$TenantID" "token:$Token" "policyid:$WindowsPolicyID"
+	& $Env:ProgramFiles"\Trend Micro\Deep Security Agent\dsa_control" -a "dsm://$ActivationURL/:$ActivationPort/" "tenantID:$TenantID" "token:$Token" "policyid:$WindowsPolicyID"
 	Stop-Transcript
 	echo "$(Get-Date -format T) - DSA Deployment Finished"
 }
